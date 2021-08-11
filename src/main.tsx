@@ -12,7 +12,6 @@ import '@contentful/forma-36-fcss/dist/styles.css'
 import '@contentful/forma-36-tokens/dist/css/index.css'
 
 import './index.css'
-
 import { Config } from './components/Config'
 import { Localhost } from './components/Localhost'
 import { Sidebar } from './components/Sidebar'
