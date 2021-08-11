@@ -1,12 +1,7 @@
 import * as React from 'react'
 
 function App() {
-
-  return (
-    <div className="App">
-      hello there
-    </div>
-  )
+  return <div className="App">hello there</div>
 }
 
-export default App
+export { App }
