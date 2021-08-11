@@ -1,5 +1,5 @@
 {
-  "name": "contentful-extension",
+  "name": "contentful-app",
   "version": "0.0.0",
   "scripts": {
     "dev": "vite",
