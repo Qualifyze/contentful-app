@@ -66,7 +66,6 @@ const Sidebar = ({ sdk }: SidebarProps) => {
   React.useEffect(() => {
     const params = sdk?.parameters?.installation as AppInstallationParameters
     if (params?.webhookUrl?.length && params?.accessToken?.length) {
-      console.log('hello?!', params)
       setParameters(params)
     } else {
       // Without the correct parameters we cannot deploy
@@ -112,8 +111,6 @@ const Sidebar = ({ sdk }: SidebarProps) => {
     } else {
       setStatus('error')
     }
-
-    console.log({ response })
   }
 
   return (
