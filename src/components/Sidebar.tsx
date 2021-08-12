@@ -10,11 +10,24 @@ import tokens from '@contentful/forma-36-tokens'
 import { SidebarExtensionSDK } from '@contentful/app-sdk'
 import { css } from '@emotion/css'
 
-type Environment = string
+type Environment = 'next' | 'production'
+type Status = 'success' | 'error' | 'idle'
 
-function triggerDeploy(environment: Environment) {
-  // TODO: Send `POST` request
-  alert(`${environment}`)
+async function triggerDeploy(environment: Environment) {
+  const response = await fetch(`TODO: Add webhook URL`, {
+    method: `POST`,
+    headers: {
+      'Content-Type': `application/json`,
+      Authorization: `token TODO: Add access token`,
+    },
+    body: JSON.stringify({
+      event_type: 'deploy',
+      client_payload: {
+        stage: 'next',
+      },
+    }),
+  })
+  return response
 }
 interface SidebarProps {
   sdk?: SidebarExtensionSDK
@@ -22,24 +35,24 @@ interface SidebarProps {
 
 const Sidebar = (props: SidebarProps) => {
   const [env, setEnv] = React.useState<Environment>(`next`)
-  const [hasTriggered, setHasTriggered] = React.useState<boolean>(false)
+  const [status, setStatus] = React.useState<Status>('idle')
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
-      if (hasTriggered) {
-        setHasTriggered(false)
+      if (!!status) {
+        setStatus('idle')
       }
     }, 10000)
     return () => clearTimeout(timer)
-  }, [hasTriggered])
+  }, [status])
 
-  if (hasTriggered) {
+  if (status === 'success') {
     return (
       <Note
         noteType="positive"
         title="Good job!"
         hasCloseButton
-        onClose={() => setHasTriggered(false)}
+        onClose={() => setStatus('idle')}
       >
         {
           // Slightly nicer to read `Next` than `next`
@@ -49,15 +62,34 @@ const Sidebar = (props: SidebarProps) => {
         }
       </Note>
     )
+  } else if (status === 'error') {
+    // The deployment trigger wasn't successful
+    return (
+      <Note
+        noteType="negative"
+        title="Ooops"
+        hasCloseButton
+        onClose={() => setStatus('idle')}
+      >
+        {`Something is broken, please let @dev know. Sorry about that!`}
+      </Note>
+    )
+  }
+
+  async function handleSubmit(environment: Environment) {
+    const response = await triggerDeploy(env)
+
+    if (response.status === 204) {
+      setStatus('success')
+    } else {
+      setStatus('error')
+    }
+
+    console.log({ response })
   }
 
   return (
-    <Form
-      onSubmit={() => {
-        triggerDeploy(env)
-        setHasTriggered(true)
-      }}
-    >
+    <Form onSubmit={() => handleSubmit(env)}>
       <div
         className={css({
           // margin: '-8px', // Negate the margin on body
