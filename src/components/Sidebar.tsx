@@ -10,36 +10,77 @@ import tokens from '@contentful/forma-36-tokens'
 import { SidebarExtensionSDK } from '@contentful/app-sdk'
 import { css } from '@emotion/css'
 
-type Environment = string
+import { AppInstallationParameters } from './Config'
 
-function triggerDeploy(environment: Environment) {
-  // TODO: Send `POST` request
-  alert(`${environment}`)
+type Environment = 'next' | 'production'
+type Status = 'success' | 'error' | 'idle'
+
+// Mapping between GitHub workflow and our local state here
+const envLookup = {
+  production: 'prod',
+  next: 'next',
+}
+
+async function triggerDeploy({
+  environment,
+  parameters,
+}: {
+  environment: Environment
+  parameters: AppInstallationParameters
+}) {
+  const response = await fetch(parameters.webhookUrl, {
+    method: `POST`,
+    headers: {
+      'Content-Type': `application/json`,
+      Authorization: `token ${parameters.accessToken}`,
+    },
+    body: JSON.stringify({
+      event_type: 'deploy',
+      client_payload: {
+        stage: envLookup[environment],
+      },
+    }),
+  })
+  return response
 }
 interface SidebarProps {
   sdk?: SidebarExtensionSDK
 }
 
-const Sidebar = (props: SidebarProps) => {
+const Sidebar = ({ sdk }: SidebarProps) => {
   const [env, setEnv] = React.useState<Environment>(`next`)
-  const [hasTriggered, setHasTriggered] = React.useState<boolean>(false)
+  const [status, setStatus] = React.useState<Status>('idle')
+  const [parameters, setParameters] = React.useState<AppInstallationParameters>(
+    { webhookUrl: '', accessToken: '' }
+  )
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
-      if (hasTriggered) {
-        setHasTriggered(false)
+      if (!!status) {
+        setStatus('idle')
       }
     }, 10000)
     return () => clearTimeout(timer)
-  }, [hasTriggered])
+  }, [status])
 
-  if (hasTriggered) {
+  React.useEffect(() => {
+    const params = sdk?.parameters?.installation as AppInstallationParameters
+    if (params?.webhookUrl?.length && params?.accessToken?.length) {
+      console.log('hello?!', params)
+      setParameters(params)
+    } else {
+      // Without the correct parameters we cannot deploy
+      setStatus('error')
+    }
+  }, [])
+
+  if (status === 'success') {
     return (
       <Note
         noteType="positive"
         title="Good job!"
         hasCloseButton
-        onClose={() => setHasTriggered(false)}
+        onClose={() => setStatus('idle')}
       >
         {
           // Slightly nicer to read `Next` than `next`
@@ -49,18 +90,36 @@ const Sidebar = (props: SidebarProps) => {
         }
       </Note>
     )
+  } else if (status === 'error') {
+    // The deployment trigger wasn't successful
+    return (
+      <Note
+        noteType="negative"
+        title="Ooops"
+        hasCloseButton
+        onClose={() => setStatus('idle')}
+      >
+        {`Something is broken, please let @dev know. Sorry about that!`}
+      </Note>
+    )
+  }
+
+  async function handleSubmit(environment: Environment) {
+    const response = await triggerDeploy({ environment, parameters })
+
+    if (response.status === 204) {
+      setStatus('success')
+    } else {
+      setStatus('error')
+    }
+
+    console.log({ response })
   }
 
   return (
-    <Form
-      onSubmit={() => {
-        triggerDeploy(env)
-        setHasTriggered(true)
-      }}
-    >
+    <Form onSubmit={() => handleSubmit(env)}>
       <div
         className={css({
-          // margin: '-8px', // Negate the margin on body
           display: 'flex',
           flexDirection: 'column',
           alignContent: 'center',
